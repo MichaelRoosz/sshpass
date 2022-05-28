@@ -51,6 +51,7 @@ enum program_return_codes {
     RETURN_INCORRECT_PASSWORD,
     RETURN_HOST_KEY_UNKNOWN,
     RETURN_HOST_KEY_CHANGED,
+    RETURN_HELP,
 };
 
 // Some systems don't define posix_openpt
@@ -70,6 +71,7 @@ int handleoutput( int fd );
 void window_resize_handler(int signum);
 void sigchld_handler(int signum);
 void term_handler(int signum);
+void term_child(int signum);
 int match( const char *reference, const char *buffer, ssize_t bufsize, int state );
 void write_pass( int fd );
 
@@ -103,17 +105,17 @@ static void hide_password()
 
 static void show_help()
 {
-    printf("Usage: " PACKAGE_NAME " [-f|-d|-p|-e] [-hV] command parameters\n"
-            "   -f filename   Take password to use from file\n"
-            "   -d number     Use number as file descriptor for getting password\n"
-            "   -p password   Provide password as argument (security unwise)\n"
-            "   -e            Password is passed as env-var \"SSHPASS\"\n"
-            "   With no parameters - password will be taken from stdin\n\n"
-            "   -P prompt     Which string should sshpass search for to detect a password prompt\n"
-            "   -v            Be verbose about what you're doing\n"
-            "   -h            Show help (this screen)\n"
-            "   -V            Print version information\n"
-            "At most one of -f, -d, -p or -e should be used\n");
+    printf("Usage: " PACKAGE_NAME " [-f|-d|-p|-e[env_var]] [-hV] command parameters\n"
+            "   -f filename   Take password to use from file.\n"
+            "   -d number     Use number as file descriptor for getting password.\n"
+            "   -p password   Provide password as argument (security unwise).\n"
+            "   -e[env_var]   Password is passed as env-var \"env_var\" if given, \"SSHPASS\" otherwise.\n"
+            "   With no parameters - password will be taken from stdin.\n\n"
+            "   -P prompt     Which string should sshpass search for to detect a password prompt.\n"
+            "   -v            Be verbose about what you're doing.\n"
+            "   -h            Show help (this screen).\n"
+            "   -V            Print version information.\n"
+            "At most one of -f, -d, -p or -e should be used.\n");
 }
 
 // Parse the command line. Fill in the "args" global struct with the results. Return argv offset
@@ -182,8 +184,7 @@ static int parse_options( int argc, char *argv[] )
             error=RETURN_INVALID_ARGUMENTS;
             break;
         case 'h':
-            error=RETURN_NOERROR;
-            break;
+            return -(RETURN_HELP+1);
         case 'V':
             printf("%s\n"
                     "(C) 2006-2011 Lingnu Open Source Consulting Ltd.\n"
@@ -206,6 +207,11 @@ static int parse_options( int argc, char *argv[] )
 int main( int argc, char *argv[] )
 {
     int opt_offset=parse_options( argc, argv );
+
+    if( opt_offset==-(RETURN_HELP+1) ) {
+        show_help();
+        return 0;
+    }
 
     if( opt_offset<0 ) {
         // There was some error
@@ -580,7 +586,7 @@ void term_handler(int signum)
     termsig = signum;
 }
 
-void term_child(int signum);
+void term_child(int signum)
 {
     fflush(stdout);
     switch(signum) {
