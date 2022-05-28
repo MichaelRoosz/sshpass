@@ -1,3 +1,4 @@
+        * Convert repo to git
         * Remove sig unsafe functions from signal handler (Ticket #22).
         * Allow -e to explicitly specify the environment variable to use
           (Ticket #5).
