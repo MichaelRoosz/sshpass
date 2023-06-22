@@ -305,10 +305,14 @@ int runprogram( int argc, char *argv[] )
        complete, at which point we no longer need to monitor the TTY anyways.
      */
 
-    sigset_t sigmask, sigmask_select;
+    sigset_t sigmask, sigmask_select, sigmask_child;
 
     // Set the signal mask during the select
     sigemptyset(&sigmask_select);
+
+    // Set the signal mask for the child
+    sigemptyset(&sigmask_child);
+    sigaddset(&sigmask_child, SIGHUP);
 
     // And during the regular run
     sigemptyset(&sigmask);
@@ -329,8 +333,8 @@ int runprogram( int argc, char *argv[] )
     if( childpid==0 ) {
         // Child
 
-        // Re-enable all signals to child
-        sigprocmask( SIG_SETMASK, &sigmask_select, NULL );
+        // Re-enable all signals but SIGHUP to child
+        sigprocmask( SIG_SETMASK, &sigmask_child, NULL );
 
         // Detach us from the current TTY
         setsid();
